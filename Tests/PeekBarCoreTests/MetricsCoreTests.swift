@@ -148,9 +148,9 @@ final class DashboardLayoutTests: XCTestCase {
     }
 
     func testDashboardRowsAndEmptyFooter() {
-        XCTAssertEqual(PopupLayout.dashboardBlockHeight(cards: 5), 3 * 64 + 2 * 8)
+        XCTAssertEqual(PopupLayout.dashboardBlockHeight(cards: 5), 208) // 3 rows * 64 + 2 gaps * 8
         let l = PopupLayout.compute(tileCount: 0, showLabels: false, showSearch: false, dashboardCards: 5, detailHeight: nil, maxHeight: 600)
-        let expected: CGFloat = 24 + (3 * 64 + 16) + 8 + 40
+        let expected: CGFloat = 280 // 24 top + 208 dashboard + 8 gap + 40 bottom
         XCTAssertEqual(l.size.height, expected)
         XCTAssertEqual(l.rows, 0)
     }
