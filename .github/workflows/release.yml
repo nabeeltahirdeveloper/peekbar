@@ -1,0 +1,37 @@
+name: Release
+
+# Push a tag like v0.2.0 and this builds a universal PeekBar.app, wraps it in a DMG
+# and attaches it to a GitHub Release. The landing page picks the newest DMG up automatically.
+#
+# The CI build is ad-hoc signed (no Developer ID in the runner), so users still need
+# right-click ▸ Open on first launch. To ship a notarized build instead, sign locally with
+# SIGN_IDENTITY set and upload the DMG to the release by hand.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        run: swift test
+      - name: Build app
+        run: Scripts/build_app.sh
+      - name: Make DMG
+        run: Scripts/make_dmg.sh
+      - name: Create release and attach DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          DMG=$(ls dist/PeekBar-*.dmg | head -n1)
+          gh release create "$TAG" "$DMG" \
+            --title "PeekBar ${TAG#v}" \
+            --generate-notes \
+            --notes "Unsigned build from CI. First launch: right-click PeekBar.app ▸ Open ▸ Open, or run \`xattr -dr com.apple.quarantine /Applications/PeekBar.app\`. Requires macOS 12 or later."

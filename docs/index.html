@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PeekBar — notch-safe menu bar manager for macOS</title>
+<meta name="description" content="PeekBar keeps your Mac's menu bar short. Hidden extras open in a Control Center–style popup under the bar, with live CPU, memory, disk, network, battery, GPU and sensor readings. Free and open source.">
+<meta property="og:title" content="PeekBar — notch-safe menu bar manager for macOS">
+<meta property="og:description" content="Hide menu bar extras in a popup under the bar, never under the notch. Stats-style system monitoring built in. Free, open source, MIT.">
+<meta property="og:image" content="https://nabeeltahirdeveloper.github.io/peekbar/images/dashboard.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0c'/%3E%3Cpath d='M18 26l14 14 14-14' fill='none' stroke='%237c9cff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0a0a0c; --bg-2: #121216; --bg-3: #1a1a20;
+    --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.14);
+    --fg: #f3f3f5; --fg-2: #a8a8b3; --fg-3: #6e6e7a;
+    --accent: #7c9cff; --accent-2: #5b7cff; --accent-soft: rgba(124,156,255,.14);
+    --ok: #4cd964; --warn: #ffb340;
+    --radius: 14px; --max: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, kbd, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  kbd { background: var(--bg-3); border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: .85em; color: var(--fg); white-space: nowrap; }
+  pre { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 14px; margin: 12px 0 0; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+  h1, h2, h3 { margin: 0; letter-spacing: -.02em; line-height: 1.15; }
+  h2 { font-size: clamp(28px, 4vw, 38px); }
+  h3 { font-size: 18px; }
+  p { margin: 0; }
+  .muted { color: var(--fg-2); }
+  .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  section { padding: 88px 0; border-top: 1px solid var(--line); }
+  .section-head { max-width: 640px; margin-bottom: 44px; }
+  .section-head p { margin-top: 14px; font-size: 18px; }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px); background: rgba(10,10,12,.7); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 58px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--fg); letter-spacing: -.01em; }
+  .brand svg { width: 26px; height: 26px; }
+  nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 26px; }
+  nav ul a { color: var(--fg-2); font-size: 14px; font-weight: 500; }
+  nav ul a:hover { color: var(--fg); text-decoration: none; }
+  @media (max-width: 720px) { nav ul { display: none; } }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 13px 22px; border-radius: 12px; font-weight: 600; font-size: 15px; border: 1px solid transparent; transition: transform .12s ease, background .12s ease, border-color .12s ease; white-space: nowrap; }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: #0b0f24; }
+  .btn-primary:hover { background: #91adff; }
+  .btn-secondary { background: var(--bg-3); color: var(--fg); border-color: var(--line-2); }
+  .btn-secondary:hover { border-color: rgba(255,255,255,.28); }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+
+  /* hero */
+  .hero { padding: 96px 0 72px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 120%; background: radial-gradient(60% 50% at 50% 0%, rgba(124,156,255,.22), transparent 70%); pointer-events: none; }
+  .hero .wrap { position: relative; text-align: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 13px; color: var(--fg-2); background: rgba(255,255,255,.03); margin-bottom: 28px; }
+  .pill b { background: var(--accent-soft); color: var(--accent); padding: 2px 9px; border-radius: 999px; font-weight: 600; }
+  .hero h1 { font-size: clamp(38px, 6.5vw, 68px); font-weight: 800; max-width: 860px; margin: 0 auto; }
+  .hero h1 span { background: linear-gradient(90deg, #a5bbff, #7c9cff 50%, #c1a0ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lead { max-width: 640px; margin: 22px auto 0; font-size: 19px; color: var(--fg-2); }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 36px; }
+  .cta-note { margin-top: 14px; font-size: 13px; color: var(--fg-3); }
+  .cta-note a { color: var(--fg-2); }
+  .hero-shot { margin: 56px auto 0; max-width: 820px; border-radius: 18px; border: 1px solid var(--line-2); box-shadow: 0 40px 100px -20px rgba(0,0,0,.8), 0 0 0 1px rgba(0,0,0,.6); overflow: hidden; background: var(--bg-2); }
+  .hero-shot img { display: block; width: 100%; height: auto; }
+
+  /* menubar demo */
+  .bar-demo { margin: 44px auto 0; max-width: 820px; }
+  .bar { display: flex; align-items: center; gap: 14px; background: linear-gradient(#26262c, #1c1c21); border: 1px solid var(--line-2); border-radius: 12px; height: 46px; padding: 0 16px; position: relative; font-size: 13px; color: var(--fg-2); }
+  .bar .apple { font-weight: 700; color: var(--fg); }
+  .bar .notch { position: absolute; left: 50%; top: -1px; transform: translateX(-50%); width: 190px; height: 30px; background: var(--bg); border-radius: 0 0 14px 14px; border: 1px solid var(--line-2); border-top: 0; }
+  .bar .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .bar .icons { display: flex; gap: 10px; }
+  .bar .icons i { display: inline-block; width: 16px; height: 16px; border-radius: 4px; background: rgba(255,255,255,.55); }
+  .bar .chev { color: var(--accent); font-weight: 700; font-size: 15px; padding: 0 4px; }
+  .bar .hidden-area { display: flex; gap: 10px; opacity: .25; }
+  .bar .hidden-area i { display: inline-block; width: 16px; height: 16px; border-radius: 4px; background: var(--accent); }
+  .bar-caption { display: flex; justify-content: center; gap: 28px; margin-top: 12px; font-size: 13px; color: var(--fg-3); flex-wrap: wrap; }
+  .bar-caption b { color: var(--fg-2); font-weight: 600; }
+  @media (max-width: 640px) { .bar .notch { width: 110px; } .bar .icons i:nth-child(n+3) { display: none; } }
+
+  /* features */
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; transition: border-color .15s; }
+  .card:hover { border-color: var(--line-2); }
+  .card .icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 18px; }
+  .card .icon svg { width: 22px; height: 22px; }
+  .card h3 { margin-bottom: 8px; }
+  .card p { color: var(--fg-2); font-size: 15px; }
+
+  /* screenshots */
+  .shots { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .shot { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { padding: 14px 18px; font-size: 14px; color: var(--fg-2); border-top: 1px solid var(--line); }
+  .shot figcaption b { color: var(--fg); font-weight: 600; }
+
+  /* modules */
+  .modules { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .mod { display: flex; gap: 14px; align-items: flex-start; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .mod .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
+  .mod b { display: block; font-size: 15px; }
+  .mod span { font-size: 13.5px; color: var(--fg-2); }
+  .facts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 28px; }
+  .fact { border-left: 2px solid var(--accent); padding: 4px 0 4px 16px; font-size: 14px; color: var(--fg-2); }
+  .fact b { color: var(--fg); display: block; font-size: 15px; margin-bottom: 2px; }
+
+  /* install */
+  .steps { display: grid; gap: 14px; counter-reset: step; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 18px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .step::before { counter-increment: step; content: counter(step); width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 700; display: grid; place-items: center; }
+  .step h3 { margin-bottom: 6px; }
+  .step p { color: var(--fg-2); font-size: 15px; }
+  .callout { margin-top: 20px; background: rgba(255,179,64,.08); border: 1px solid rgba(255,179,64,.25); border-radius: 12px; padding: 16px 18px; font-size: 14.5px; color: var(--fg-2); }
+  .callout b { color: var(--warn); }
+
+  /* two-col */
+  .two { display: grid; gap: 40px; grid-template-columns: 1.1fr 1fr; align-items: start; }
+  @media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+  ul.checks { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 10px; }
+  ul.checks li { display: flex; gap: 12px; align-items: flex-start; color: var(--fg-2); font-size: 15px; }
+  ul.checks li::before { content: ""; flex: none; width: 20px; height: 20px; margin-top: 3px; border-radius: 50%; background: rgba(76,217,100,.15) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3L15 7' fill='none' stroke='%234cd964' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 18px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { white-space: nowrap; color: var(--fg); }
+  td { color: var(--fg-2); }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; color: var(--fg-3); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  footer a { color: var(--fg-2); }
+  .skip { position: absolute; left: -9999px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="PeekBar home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1a1a20"/><path d="M18 26l14 14 14-14" fill="none" stroke="#7c9cff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      PeekBar
+    </a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#screens">Screens</a></li>
+      <li><a href="#monitoring">Monitoring</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#source">Source</a></li>
+      <li><a href="https://github.com/nabeeltahirdeveloper/peekbar">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="pill"><b>Open source</b> MIT licensed · macOS 12+ · Apple Silicon &amp; Intel</div>
+    <h1>The menu bar manager that <span>never hides under the notch</span></h1>
+    <p class="lead">PeekBar keeps your menu bar short. Extras you don't need all the time drop into a Control Center–style popup under the bar, so nothing ends up unclickable behind the camera. Live system monitoring is built in.</p>
+    <div class="cta">
+      <a class="btn btn-primary" id="download" href="https://github.com/nabeeltahirdeveloper/peekbar/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <span id="download-label">Download for macOS</span>
+      </a>
+      <a class="btn btn-secondary" href="https://github.com/nabeeltahirdeveloper/peekbar">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 015.8 0C17 4.3 18 4.6 18 4.6c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    <p class="cta-note" id="download-note">Free forever. Universal binary. <a href="#gatekeeper">Not notarized yet, first launch needs right-click ▸ Open.</a></p>
+
+    <div class="bar-demo" aria-hidden="true">
+      <div class="bar">
+        <span class="apple"></span><span>PeekBar</span><span>File</span><span>Edit</span><span>View</span>
+        <div class="notch"></div>
+        <div class="right">
+          <div class="hidden-area"><i></i><i></i><i></i><i></i></div>
+          <span class="chev">⌄</span>
+          <div class="icons"><i></i><i></i><i></i></div>
+          <span>Mon 9:41</span>
+        </div>
+      </div>
+      <div class="bar-caption">
+        <span><b>Pocket</b> hidden, opens in the popup</span>
+        <span><b>⌄</b> PeekBar</span>
+        <span><b>Pinned</b> always visible</span>
+      </div>
+    </div>
+
+    <figure class="hero-shot" style="margin-top:36px">
+      <img src="images/dashboard.png" alt="PeekBar popup showing hidden menu bar extras as tiles above a dashboard of CPU, memory, disk, network and battery cards" width="800" height="720" loading="eager">
+    </figure>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Why PeekBar</div>
+      <h2>Built for notched MacBooks, useful on every Mac</h2>
+      <p class="muted">Most menu bar hiders slide icons back into the bar, which on a notched display means they slide into the camera housing. PeekBar reveals them <em>below</em> the bar instead.</p>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1.5"/><path d="M9 4h6v2.5a1.5 1.5 0 01-1.5 1.5h-3A1.5 1.5 0 019 6.5z" fill="currentColor"/><path d="M6 13l6 6 6-6"/></svg></div>
+        <h3>Notch-safe popup</h3>
+        <p>Hidden extras open in a popup 8 pt under the bar, right-aligned to the PeekBar icon and clamped on screen. The bar itself never moves, so nothing is ever unclickable.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></div>
+        <h3>Real icons, real menus</h3>
+        <p>Tiles show each extra's actual icon. Click one and its genuine menu opens, driven through Accessibility. Right-click, keyboard navigation and search are all there.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-8 4 5"/><path d="M3 21h18"/></svg></div>
+        <h3>Stats-style monitoring</h3>
+        <p>Nine modules with sparklines, detail pages and top processes. Pin any of them to the bar as a compact widget: line chart, ring, tachometer, bar chart, label and more.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+        <h3>Threshold alerts</h3>
+        <p>Metric, above or below, threshold, sustained duration. Fires as a macOS notification with hysteresis so it doesn't flap, and clicking it opens the module's page.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Private by design</h3>
+        <p>Captures only menu bar icons, uses Accessibility only to click them, and never saves or sends anything. Its single optional network request is a public IP lookup, off by default.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg></div>
+        <h3>Light on resources</h3>
+        <p>Sampling is demand-driven. A module is read only while a card, widget or alert needs it. With the popup closed and no widgets, nothing samples at all.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Screens</div>
+      <h2>Everything lives under the bar</h2>
+    </div>
+    <div class="shots">
+      <figure class="shot"><img src="images/popup-tiles.png" alt="PeekBar popup with hidden menu bar extras as tiles" loading="lazy"><figcaption><b>The popup.</b> Hidden extras as tiles with search, keyboard navigation and a "New" badge on extras that just appeared.</figcaption></figure>
+      <figure class="shot"><img src="images/detail-cpu.png" alt="CPU detail page with per-core bars, load average and top processes" loading="lazy"><figcaption><b>CPU detail.</b> User/system split, P/E-core bars, per-core load, temperature and the top five processes.</figcaption></figure>
+      <figure class="shot"><img src="images/detail-sensors.png" alt="Sensors page listing CPU, GPU, memory, storage, battery temperatures and fans" loading="lazy"><figcaption><b>Sensors.</b> Grouped SMC and HID readings: CPU, GPU, system, memory, storage, battery, ambient, fans and power.</figcaption></figure>
+      <figure class="shot"><img src="images/walkthrough.png" alt="First-run walkthrough window explaining permissions" loading="lazy"><figcaption><b>Walkthrough.</b> A seven-step first run covering the two permissions, hiding and pinning, the popup, widgets and alerts.</figcaption></figure>
+      <figure class="shot"><img src="images/settings-monitoring.png" alt="Monitoring settings with per-module toggles and widget styles" loading="lazy"><figcaption><b>Monitoring settings.</b> Per-module toggles, menu bar widget styles, colours, labels and sampling interval.</figcaption></figure>
+      <figure class="shot"><img src="images/welcome.png" alt="Welcome screen showing the three zones of a notched menu bar" loading="lazy"><figcaption><b>Zones.</b> Pinned stays in the bar, Pocket hides into the popup, Vault hides from the default popup too.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="monitoring">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">System monitoring</div>
+      <h2>Nine modules, all native APIs</h2>
+      <p class="muted">No helper daemon, no kernel extension. Every reading comes from Mach, sysctl, IOKit or the SMC user client, read-only.</p>
+    </div>
+    <div class="modules">
+      <div class="mod"><span class="dot" style="background:#ff6b6b"></span><div><b>CPU</b><span>Total, P/E-core split, per-core bars, load average, temperature, top processes</span></div></div>
+      <div class="mod"><span class="dot" style="background:#7c9cff"></span><div><b>Memory</b><span>App, wired, compressed, cached, pressure, swap, top apps</span></div></div>
+      <div class="mod"><span class="dot" style="background:#ffb340"></span><div><b>Disk</b><span>Per-volume usage, read and write rate charts</span></div></div>
+      <div class="mod"><span class="dot" style="background:#4cd964"></span><div><b>Network</b><span>Up/down charts, interface, local and optional public IP, session totals</span></div></div>
+      <div class="mod"><span class="dot" style="background:#5ac8fa"></span><div><b>Battery</b><span>Charge, state, time left, health, cycles, temperature, wattage, adapter</span></div></div>
+      <div class="mod"><span class="dot" style="background:#c1a0ff"></span><div><b>GPU</b><span>Utilization, renderer and tiler bars, memory in use</span></div></div>
+      <div class="mod"><span class="dot" style="background:#ff9f7a"></span><div><b>Sensors</b><span>Temperatures, fans, voltage and current from SMC and HID</span></div></div>
+      <div class="mod"><span class="dot" style="background:#64d2ff"></span><div><b>Bluetooth</b><span>Paired devices with connection state and battery, including earbud case</span></div></div>
+      <div class="mod"><span class="dot" style="background:#ffd60a"></span><div><b>Clock</b><span>Multiple time zones with date and offset</span></div></div>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>Menu bar widgets</b>Mini, line chart, bar chart, ring, tachometer, label, speed, battery, memory bar, state dot. Right-click to restyle, ⌘-drag to reorder.</div>
+      <div class="fact"><b>Dashboard</b>Cards above the extras grid, below it, or on their own page. <kbd>⌥</kbd><kbd>⌘</kbd><kbd>S</kbd> opens it, click a card for details.</div>
+      <div class="fact"><b>Measured footprint</b>About 1 % CPU and 20 to 40 MB of memory with four widgets live.</div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Install</div>
+      <h2>Up and running in a minute</h2>
+      <p class="muted">Requires macOS 12 Monterey or later. Quit other menu bar hiders first (Hidden Bar, Ice, Bartender); two hiding separators in one bar fight each other.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div><h3>Download and drag to Applications</h3><p>Open the DMG from the <a id="download-inline" href="https://github.com/nabeeltahirdeveloper/peekbar/releases/latest">latest release</a> and drag PeekBar into Applications.</p></div></div>
+      <div class="step" id="gatekeeper"><div><h3>Open it once with right-click ▸ Open</h3><p>PeekBar isn't notarized with an Apple Developer ID yet, so Gatekeeper refuses a plain double-click the first time. Right-click <b>PeekBar.app</b>, choose <b>Open</b>, then <b>Open</b> again. If macOS says the app is damaged, clear the quarantine flag instead:</p>
+        <pre><code>xattr -dr com.apple.quarantine /Applications/PeekBar.app</code></pre></div></div>
+      <div class="step"><div><h3>Grant two permissions</h3><p><b>Screen Recording</b> lets PeekBar draw the real icons on tiles. <b>Accessibility</b> lets it click them for you and identify which app owns each extra. The walkthrough shows live status and Allow buttons. If macOS keeps asking after you've granted one, quit and reopen PeekBar once.</p></div></div>
+      <div class="step"><div><h3>Hide extras with ⌘-drag</h3><p>Hold <kbd>⌘</kbd> and drag any status icon. PeekBar expands, a divider appears next to its chevron, and dropping the icon left of the line hides it. Try <kbd>⌥</kbd><kbd>⌘</kbd><kbd>A</kbd> for Arrange mode to see everything at once.</p></div></div>
+    </div>
+    <div class="callout"><b>Heads up.</b> PeekBar has no Dock icon. After launch, look for the chevron at the left end of your status icons. Press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>S</kbd> to open the popup from anywhere.</div>
+
+    <table aria-label="Keyboard shortcuts">
+      <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>S</kbd></td><td>Open or close the popup / dashboard</td></tr>
+        <tr><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>A</kbd></td><td>Arrange mode, show every extra with the divider HUD</td></tr>
+        <tr><td><kbd>⌥</kbd> click</td><td>Open the popup including Vault extras</td></tr>
+        <tr><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>Tab</kbd></td><td>Move between tiles</td></tr>
+        <tr><td><kbd>Return</kbd> / <kbd>Esc</kbd></td><td>Activate a tile / close or go back</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="source">
+  <div class="wrap">
+    <div class="two">
+      <div>
+        <div class="eyebrow">Open source</div>
+        <h2>Read it, build it, change it</h2>
+        <p class="muted" style="margin-top:14px;font-size:17px">PeekBar is a Swift Package with no third-party dependencies. The logic that decides zones, collapse geometry, identity matching, metric math and alert rules lives in a pure <code>PeekBarCore</code> library with unit tests, so the interesting parts can be exercised without a menu bar.</p>
+        <ul class="checks">
+          <li>MIT licensed. Use it, fork it, ship it.</li>
+          <li>SwiftUI + AppKit, macOS 12 to 26, universal binary.</li>
+          <li>No analytics, no updater phoning home, no accounts.</li>
+          <li>Issues and pull requests welcome on GitHub.</li>
+        </ul>
+        <div class="cta" style="justify-content:flex-start;margin-top:28px">
+          <a class="btn btn-secondary" href="https://github.com/nabeeltahirdeveloper/peekbar">Browse the code</a>
+          <a class="btn btn-secondary" href="https://github.com/nabeeltahirdeveloper/peekbar/issues">Report an issue</a>
+        </div>
+      </div>
+      <div>
+        <h3>Build from source</h3>
+        <pre><code>git clone https://github.com/nabeeltahirdeveloper/peekbar.git
+cd peekbar
+swift test                 # unit tests
+Scripts/build_app.sh       # universal build → dist/PeekBar.app
+Scripts/make_dmg.sh        # → dist/PeekBar-&lt;version&gt;.dmg</code></pre>
+        <p class="muted" style="margin-top:14px;font-size:14px">Needs Xcode 15 or later. The build script signs with a Developer ID if you export <code>SIGN_IDENTITY</code>, otherwise with a local self-signed identity or ad hoc. A stable identity keeps the Screen Recording and Accessibility grants across rebuilds.</p>
+        <h3 style="margin-top:28px">Privacy and permissions</h3>
+        <table aria-label="Permissions">
+          <tbody>
+            <tr><td>Screen Recording</td><td>Captures menu bar icons for tiles. Nothing is saved.</td></tr>
+            <tr><td>Accessibility</td><td>Presses extras on your behalf and reads their owning app.</td></tr>
+            <tr><td>Notifications</td><td>Only if you create an alert rule.</td></tr>
+            <tr><td>Network</td><td>Only the optional public IP lookup, off by default.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>PeekBar · <a href="https://github.com/nabeeltahirdeveloper/peekbar/blob/main/LICENSE">MIT License</a> · © 2026 Nabeel Tahir</div>
+    <div><a href="https://github.com/nabeeltahirdeveloper/peekbar">GitHub</a> · <a href="https://github.com/nabeeltahirdeveloper/peekbar/releases">Releases</a> · <a href="https://github.com/nabeeltahirdeveloper/peekbar#readme">Documentation</a></div>
+  </div>
+</footer>
+
+<script>
+  // Resolve the newest DMG from GitHub Releases so the button always points at the current build.
+  (async () => {
+    try {
+      const r = await fetch('https://api.github.com/repos/nabeeltahirdeveloper/peekbar/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
+      if (!r.ok) return;
+      const rel = await r.json();
+      const dmg = (rel.assets || []).find(a => /\.dmg$/i.test(a.name));
+      const version = (rel.tag_name || '').replace(/^v/, '');
+      if (dmg) {
+        document.getElementById('download').href = dmg.browser_download_url;
+        document.getElementById('download-inline').href = dmg.browser_download_url;
+        const mb = (dmg.size / 1048576).toFixed(1);
+        document.getElementById('download-label').textContent = `Download PeekBar ${version} for macOS`;
+        const note = document.getElementById('download-note');
+        note.insertAdjacentHTML('afterbegin', `${dmg.name} · ${mb} MB · `);
+      }
+    } catch (_) { /* leave the releases page link in place */ }
+  })();
+</script>
+</body>
+</html>

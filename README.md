@@ -2,6 +2,14 @@
 
 **A notch-safe macOS menu bar manager with a Control Center–style popup, plus the full system-monitoring feature set of Stats.**
 
+[![Website](https://img.shields.io/badge/website-nabeeltahirdeveloper.github.io%2Fpeekbar-7c9cff)](https://nabeeltahirdeveloper.github.io/peekbar/)
+[![Latest release](https://img.shields.io/github/v/release/nabeeltahirdeveloper/peekbar?label=download&color=4cd964)](https://github.com/nabeeltahirdeveloper/peekbar/releases/latest)
+[![CI](https://github.com/nabeeltahirdeveloper/peekbar/actions/workflows/ci.yml/badge.svg)](https://github.com/nabeeltahirdeveloper/peekbar/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![macOS 12+](https://img.shields.io/badge/macOS-12%2B-lightgrey)
+
+**Website:** https://nabeeltahirdeveloper.github.io/peekbar/ · **Download:** [latest DMG](https://github.com/nabeeltahirdeveloper/peekbar/releases/latest)
+
 PeekBar keeps your menu bar short. Extras you don't need all the time are hidden and revealed in a popup under the bar, so nothing ever ends up unclickable under the camera housing. The same popup can show live CPU, memory, disk, network, battery, GPU, sensor, Bluetooth and clock readings, any of which can also be pinned to the bar as a compact widget, with threshold notifications.
 
 Built from `PeekBar_SRS_v0.1.pdf` (SRS + product brief). Open questions in SRS §16 were resolved with the SRS's own suggested defaults; later additions (monitoring, widgets, alerts, reveal modes, walkthrough) came from product feedback.
@@ -30,6 +38,8 @@ Built from `PeekBar_SRS_v0.1.pdf` (SRS + product brief). Open questions in SRS �
 13. [Known limitations](#known-limitations)
 14. [SRS traceability](#srs-traceability)
 15. [Project layout](#project-layout)
+16. [Contributing](#contributing)
+17. [License](#license)
 
 ---
 
@@ -50,7 +60,7 @@ Platform notes:
 
 ## Install
 
-1. Open `PeekBar-0.1.0.dmg` (built by `Scripts/make_dmg.sh`, see [Build](#build-sign-package)) and drag **PeekBar** into **Applications**.
+1. Download the DMG from the [latest release](https://github.com/nabeeltahirdeveloper/peekbar/releases/latest) (or build one yourself with `Scripts/make_dmg.sh`, see [Build](#build-sign-package)), open it and drag **PeekBar** into **Applications**.
 2. The app is signed with a local certificate, not an Apple Developer ID. On any Mac other than the build machine, Gatekeeper will refuse the first launch. Either right-click **PeekBar.app ▸ Open ▸ Open**, or run:
 
    ```bash
@@ -326,3 +336,25 @@ dist/             build output (ignored)
 ```
 
 No license file has been added yet; add one before publishing.
+
+## Contributing
+
+Issues and pull requests are welcome at https://github.com/nabeeltahirdeveloper/peekbar.
+
+- `swift test` must pass; CI runs it on every push and pull request.
+- Keep policy and math in `PeekBarCore` (pure, testable) and AppKit/SwiftUI glue in `PeekBar`.
+- Bug reports are most useful with the macOS version, chip, whether the display has a notch, and steps to reproduce.
+
+## Releasing
+
+Push a tag and CI builds the DMG and publishes a GitHub Release; the website picks up the newest DMG automatically:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+CI builds are ad-hoc signed. For a notarized build, run `SIGN_IDENTITY="Developer ID Application: …" Scripts/build_app.sh && Scripts/make_dmg.sh` locally, notarize, and upload the DMG to the release.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
