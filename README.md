@@ -339,11 +339,9 @@ No license file has been added yet; add one before publishing.
 
 ## Contributing
 
-Issues and pull requests are welcome at https://github.com/nabeeltahirdeveloper/peekbar.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, code layout and PR checklist, [CHANGELOG.md](CHANGELOG.md) for release history, and [SECURITY.md](SECURITY.md) for reporting vulnerabilities privately.
 
-- `swift test` must pass; CI runs it on every push and pull request.
-- Keep policy and math in `PeekBarCore` (pure, testable) and AppKit/SwiftUI glue in `PeekBar`.
-- Bug reports are most useful with the macOS version, chip, whether the display has a notch, and steps to reproduce.
+If PeekBar saves you time, you can [buy me a coffee](https://www.buymeacoffee.com/nabeeltahir); it goes toward the Apple Developer Program fee for notarized builds.
 
 ## Releasing
 

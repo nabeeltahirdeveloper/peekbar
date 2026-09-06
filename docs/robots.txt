@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://nabeeltahirdeveloper.github.io/peekbar/sitemap.xml

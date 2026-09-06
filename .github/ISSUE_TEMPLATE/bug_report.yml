@@ -1,0 +1,44 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: "macOS 15.6, M1 Pro"
+    validations:
+      required: true
+  - type: dropdown
+    id: notch
+    attributes:
+      label: Display
+      options:
+        - Built-in display with a notch
+        - Built-in display without a notch
+        - External display
+        - Mixed (built-in + external)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PeekBar version
+      placeholder: "0.1.0 (from Settings ▸ About)"
+  - type: input
+    id: other
+    attributes:
+      label: Other menu bar tools running
+      placeholder: "Ice, Hidden Bar, Bartender, Stats, none"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs
+      description: A screenshot of the menu bar or the popup helps a lot.
