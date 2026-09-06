@@ -31,7 +31,14 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           DMG=$(ls dist/PeekBar-*.dmg | head -n1)
-          gh release create "$TAG" "$DMG" \
-            --title "PeekBar ${TAG#v}" \
-            --generate-notes \
-            --notes "Unsigned build from CI. First launch: right-click PeekBar.app ▸ Open ▸ Open, or run \`xattr -dr com.apple.quarantine /Applications/PeekBar.app\`. Requires macOS 12 or later."
+          NOTES="Unsigned build from CI. First launch: right-click PeekBar.app ▸ Open ▸ Open, or run \`xattr -dr com.apple.quarantine /Applications/PeekBar.app\`. Requires macOS 12 or later."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # A release published by hand (e.g. a locally signed DMG) wins over the CI build.
+            if gh release view "$TAG" --json assets -q '.assets[].name' | grep -q '\.dmg$'; then
+              echo "Release $TAG already has a DMG attached; leaving it as is."
+              exit 0
+            fi
+            gh release upload "$TAG" "$DMG"
+          else
+            gh release create "$TAG" "$DMG" --title "PeekBar ${TAG#v}" --generate-notes --notes "$NOTES"
+          fi
